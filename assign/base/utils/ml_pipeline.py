@@ -118,7 +118,7 @@ def predict(model_path, preprocessing_steps, input_data):
     except Exception as e:
         raise ValueError(f"Failed to load model: {str(e)}")
     
-    # Convert input_data to DataFrame
+
     if isinstance(input_data, dict):
         df = pd.DataFrame([input_data])
     elif isinstance(input_data, pd.DataFrame):
@@ -126,12 +126,10 @@ def predict(model_path, preprocessing_steps, input_data):
     else:
         raise ValueError("Input data must be a dictionary or DataFrame")
     
-    # Normalize column names to lowercase
     df.columns = [col.lower() for col in df.columns]
     
     target_column = preprocessing_steps.get('target_column', None)
     
-    # Raw features expected (numerical + categorical)
     numerical_cols = preprocessing_steps.get('numerical_cols', [])
     categorical_cols = preprocessing_steps.get('categorical_cols', [])
     
@@ -139,29 +137,29 @@ def predict(model_path, preprocessing_steps, input_data):
     if target_column and target_column in raw_features:
         raw_features.remove(target_column)
     
-    # Keep only raw_features columns, fill missing ones with 0
+
     for col in raw_features:
         if col not in df.columns:
             df[col] = 0
     df = df[raw_features]
     
-    # Re-evaluate column types based on current data to avoid type mismatches
+
     current_numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
     current_categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
     
-    # Only apply numerical imputation to columns that are actually numerical in current data
+
     existing_num_cols = [col for col in numerical_cols if col in current_numerical_cols]
     if existing_num_cols:
         num_imputer = SimpleImputer(strategy=preprocessing_steps.get('num_imputer_strategy', 'mean'))
         df[existing_num_cols] = num_imputer.fit_transform(df[existing_num_cols])
     
-    # Only apply categorical imputation to columns that are actually categorical in current data
+
     existing_cat_cols = [col for col in categorical_cols if col in current_categorical_cols]
     if existing_cat_cols:
         cat_imputer = SimpleImputer(strategy=preprocessing_steps.get('cat_imputer_strategy', 'constant'), fill_value='missing')
         df[existing_cat_cols] = cat_imputer.fit_transform(df[existing_cat_cols])
     
-    # Encode categorical columns if present and if encoder exists
+
     if existing_cat_cols:
         encoder_path = model_path.replace('.joblib', '_encoder.joblib')
         try:
@@ -175,14 +173,13 @@ def predict(model_path, preprocessing_steps, input_data):
     else:
         df = df[existing_num_cols]
     
-    # Ensure all expected columns are present, fill missing with 0
+
     expected_cols = preprocessing_steps.get('training_features', list(df.columns))
     for col in expected_cols:
         if col not in df.columns:
             df[col] = 0
     df = df[expected_cols]
     
-    # Predict
     try:
         predictions = model.predict(df)
         return predictions.tolist()

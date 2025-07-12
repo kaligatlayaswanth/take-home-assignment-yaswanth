@@ -18,7 +18,7 @@ class UploadFileView(APIView):
         if serializer.is_valid():
             file_obj = serializer.save()
             try:
-                # Infer schema and metadata
+
                 file_path = file_obj.file.path
                 metadata = infer_schema_and_metadata(file_path)
                 file_obj.metadata = metadata
@@ -48,10 +48,10 @@ class TrainModelView(APIView):
             file_obj = FileUpload.objects.get(session_id=session_id)
             target_column = request.data.get('target_column', None)
             
-            # Train model
+
             model_path, metrics, feature_importance, preprocessing_steps = train_model(file_obj.file.path, target_column)
             
-            # Save model metadata
+
             trained_model = TrainedModel.objects.create(
                 session=file_obj,
                 model_path=model_path,
@@ -76,7 +76,7 @@ class PredictView(APIView):
             if not input_data:
                 return Response({'error': 'No input data provided'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Handle JSON or CSV input
+
             if isinstance(input_data, list):
                 df = pd.DataFrame(input_data)
             elif isinstance(input_data, dict):
@@ -106,17 +106,17 @@ class SummaryView(APIView):
             feature_importance = model_obj.feature_importance
             target_column = model_obj.target_column
             
-            # Generate insights
+
             insights = []
             
-            # Insight 1: Top features driving the target
+
             top_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)[:3]
             insights.append({
                 "insight": f"Key drivers of {target_column}",
                 "details": f"The top features influencing {target_column} are: {', '.join([f'{k} ({v:.3f})' for k, v in top_features])}. Focus on optimizing these factors to improve outcomes."
             })
             
-            # Insight 2: High importance features
+
             high_importance_features = [(k, v) for k, v in feature_importance.items() if v > 0.1]
             if high_importance_features:
                 insights.append({
@@ -124,14 +124,14 @@ class SummaryView(APIView):
                     "details": f"Features with high importance (>0.1): {', '.join([f'{k} ({v:.3f})' for k, v in high_importance_features])}. These are critical for accurate predictions."
                 })
             
-            # Insight 3: Feature importance distribution
+
             if len(feature_importance) > 5:
                 insights.append({
                     "insight": "Feature importance analysis",
                     "details": f"Model analyzed {len(feature_importance)} features. The top 3 features account for {sum([v for k, v in top_features]):.1%} of the total importance."
                 })
             
-            # Insight 4: Model performance context
+
             if hasattr(model_obj, 'metrics'):
                 metrics = model_obj.metrics
                 if 'accuracy' in metrics:
